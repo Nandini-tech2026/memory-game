@@ -1,30 +1,87 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  body { font-family: Arial, sans-serif; padding: 12px; max-width: 480px; margin: 0 auto; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px; min-height: 100vh;
+    font-family: "Trebuchet MS", Arial, sans-serif; color: #3b2a63;
+    background: linear-gradient(160deg, #ffd6ec 0%, #d9d2ff 50%, #c9f3ff 100%);
+  }
+  .wrap { max-width: 460px; margin: 0 auto; }
+  h1 {
+    text-align: center; font-size: 2.2rem; margin: 6px 0 14px;
+    background: linear-gradient(90deg, #ff4fa3, #7a4dff, #00b4d8);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .panel {
+    background: rgba(255,255,255,0.75); border-radius: 20px; padding: 16px;
+    box-shadow: 0 8px 20px rgba(122,77,255,0.18); margin-bottom: 16px;
+  }
+  input {
+    width: 100%; padding: 14px; font-size: 1rem; border-radius: 14px;
+    border: 2px solid #c9b8ff; margin-bottom: 10px; text-align: center;
+  }
+  .btn {
+    padding: 13px 22px; font-size: 1rem; font-weight: bold; color: white;
+    border: 0; border-radius: 30px; cursor: pointer;
+    background: linear-gradient(90deg, #ff4fa3, #7a4dff);
+    box-shadow: 0 5px 12px rgba(122,77,255,0.35);
+  }
+  .btn.small { padding: 8px 16px; font-size: 0.9rem; background: #9b8fc4; box-shadow: none; }
+  .center { text-align: center; }
+  .stats { display: flex; gap: 8px; margin-bottom: 14px; }
+  .stat {
+    flex: 1; text-align: center; background: white; border-radius: 16px;
+    padding: 8px 4px; box-shadow: 0 4px 10px rgba(122,77,255,0.15);
+  }
+  .stat b { display: block; font-size: 1.3rem; color: #7a4dff; }
+  .stat span { font-size: 0.8rem; color: #8a7bb3; }
   #grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-  .card { aspect-ratio: 1; background: #5b3fd1; color: white; font-size: 2rem; border: 0; border-radius: 12px; }
+  .card {
+    aspect-ratio: 1; border: 0; border-radius: 16px; font-size: 2rem;
+    color: white; font-weight: bold; cursor: pointer;
+    background: linear-gradient(135deg, #ff4fa3, #7a4dff);
+    box-shadow: 0 5px 10px rgba(122,77,255,0.35);
+    transition: transform 0.2s;
+  }
+  .card.open { background: white; color: black; transform: scale(1.06); }
+  .card.done { background: linear-gradient(135deg, #b9f6ca, #69f0ae); transform: scale(1); }
+  #msg { text-align: center; font-size: 1.25rem; font-weight: bold; min-height: 32px; margin: 12px 0; }
+  h2 { margin: 0 0 8px; font-size: 1.2rem; color: #7a4dff; }
+  ol { margin: 0 0 12px; padding-left: 22px; line-height: 1.8; }
+  footer { text-align: center; font-size: 0.85rem; color: #6e5da0; padding: 8px 0 20px; }
 </style>
 
-<h1>Memory Match</h1>
+<div class="wrap">
+  <h1>Memory Match</h1>
 
-<div id="login">
-  <input id="name" type="text" maxlength="12" placeholder="Enter your name" style="padding:12px;font-size:1rem">
-  <button id="start" style="padding:12px 20px;font-size:1rem">Start</button>
+  <div id="login" class="panel center">
+    <p>Enter your name to play</p>
+    <input id="name" type="text" maxlength="12" placeholder="Your name">
+    <button id="start" class="btn">Start Game</button>
+  </div>
+
+  <div id="game" style="display:none">
+    <div class="stats">
+      <div class="stat"><b id="who">-</b><span>Player</span></div>
+      <div class="stat"><b><span id="moves" style="font-size:1.3rem;color:#7a4dff">0</span>/15</b><span>Moves</span></div>
+      <div class="stat"><b><span id="pairs" style="font-size:1.3rem;color:#7a4dff">0</span>/8</b><span>Pairs</span></div>
+    </div>
+    <div id="grid"></div>
+    <p id="msg"></p>
+    <div class="center">
+      <button id="again" class="btn" style="display:none">Try again</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Leaderboard (best moves)</h2>
+    <ol id="board"></ol>
+    <button id="clear" class="btn small">Clear leaderboard</button>
+  </div>
+
+  <footer>© 2026 N@nadini. Memory Match.</footer>
 </div>
-
-<div id="game" style="display:none">
-  <p>Player: <b id="who"></b></p>
-  <p>Moves: <b id="moves">0</b>/15 | Pairs: <b id="pairs">0</b>/8</p>
-  <div id="grid"></div>
-  <p id="msg" style="font-size:1.3rem;font-weight:bold"></p>
-  <button id="again" style="display:none;padding:12px 20px;font-size:1rem">Try again</button>
-</div>
-
-<h2>Leaderboard (best moves)</h2>
-<ol id="board"></ol>
-<button id="clear" style="padding:8px 14px">Clear leaderboard</button>
-<p style="font-size:0.9rem;color:gray">© 2026 N@nadini. Memory Match.</p>
 
 <script>
   var MAX = 15;
@@ -69,37 +126,37 @@
       ol.innerHTML = "<li>No wins yet. Be the first!</li>";
       return;
     }
+    var medals = ["🥇", "🥈", "🥉"];
     for (var i = 0; i < list.length && i < 10; i++) {
       var li = document.createElement("li");
-      li.textContent = list[i].name + " - " + list[i].moves + " moves";
+      var prefix = i < 3 ? medals[i] + " " : "";
+      li.textContent = prefix + list[i].name + " - " + list[i].moves + " moves";
       ol.appendChild(li);
     }
   }
 
   function show(card) {
     card.textContent = card.dataset.emoji;
-    card.style.background = "#ffffff";
-    card.style.color = "black";
+    card.classList.add("open");
   }
 
   function hide(card) {
     card.textContent = "?";
-    card.style.background = "#5b3fd1";
-    card.style.color = "white";
+    card.classList.remove("open");
   }
 
   function endGame(won) {
     over = true;
     var msg = document.getElementById("msg");
     if (won) {
-      msg.textContent = "Hurray " + player + "! You win in " + moves + " moves!";
+      msg.textContent = "🎉 Hurray " + player + "! You win in " + moves + " moves!";
       var list = loadScores();
       list.push({ name: player, moves: moves });
       saveScores(list);
       showBoard();
       beep(1000);
     } else {
-      msg.textContent = player + ", you lose! 15 moves are over.";
+      msg.textContent = "😢 " + player + ", you lose! 15 moves are over.";
       beep(200);
     }
     document.getElementById("again").style.display = "inline-block";
@@ -120,8 +177,10 @@
     if (first.dataset.emoji === card.dataset.emoji) {
       first.dataset.done = "yes";
       card.dataset.done = "yes";
-      first.style.background = "#c8f2d4";
-      card.style.background = "#c8f2d4";
+      first.classList.remove("open");
+      card.classList.remove("open");
+      first.classList.add("done");
+      card.classList.add("done");
       pairs++;
       document.getElementById("pairs").textContent = pairs;
       beep(700);
@@ -206,4 +265,4 @@
   };
 
   showBoard();
-</script>
+  </script>

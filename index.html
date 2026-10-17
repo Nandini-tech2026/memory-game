@@ -1,0 +1,209 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: Arial, sans-serif; padding: 12px; max-width: 480px; margin: 0 auto; }
+  #grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .card { aspect-ratio: 1; background: #5b3fd1; color: white; font-size: 2rem; border: 0; border-radius: 12px; }
+</style>
+
+<h1>Memory Match</h1>
+
+<div id="login">
+  <input id="name" type="text" maxlength="12" placeholder="Enter your name" style="padding:12px;font-size:1rem">
+  <button id="start" style="padding:12px 20px;font-size:1rem">Start</button>
+</div>
+
+<div id="game" style="display:none">
+  <p>Player: <b id="who"></b></p>
+  <p>Moves: <b id="moves">0</b>/15 | Pairs: <b id="pairs">0</b>/8</p>
+  <div id="grid"></div>
+  <p id="msg" style="font-size:1.3rem;font-weight:bold"></p>
+  <button id="again" style="display:none;padding:12px 20px;font-size:1rem">Try again</button>
+</div>
+
+<h2>Leaderboard (best moves)</h2>
+<ol id="board"></ol>
+<button id="clear" style="padding:8px 14px">Clear leaderboard</button>
+<p style="font-size:0.9rem;color:gray">© 2026 N@nadini. Memory Match.</p>
+
+<script>
+  var MAX = 15;
+  var PEEK = 2000;
+  var emojis = ["🐱","🐶","🦊","🐼","🦁","🐸","🦄","🐙"];
+  var grid = document.getElementById("grid");
+  var first, locked, over, moves, pairs;
+  var player = "";
+  var audio = null;
+
+  function beep(freq) {
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = audio.createOscillator();
+      osc.frequency.value = freq;
+      osc.connect(audio.destination);
+      osc.start();
+      osc.stop(audio.currentTime + 0.2);
+    } catch (e) {}
+  }
+
+  function loadScores() {
+    try {
+      return JSON.parse(localStorage.getItem("memoryScores") || "[]");
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveScores(list) {
+    try {
+      localStorage.setItem("memoryScores", JSON.stringify(list));
+    } catch (e) {}
+  }
+
+  function showBoard() {
+    var list = loadScores();
+    list.sort(function (a, b) { return a.moves - b.moves; });
+    var ol = document.getElementById("board");
+    ol.innerHTML = "";
+    if (list.length === 0) {
+      ol.innerHTML = "<li>No wins yet. Be the first!</li>";
+      return;
+    }
+    for (var i = 0; i < list.length && i < 10; i++) {
+      var li = document.createElement("li");
+      li.textContent = list[i].name + " - " + list[i].moves + " moves";
+      ol.appendChild(li);
+    }
+  }
+
+  function show(card) {
+    card.textContent = card.dataset.emoji;
+    card.style.background = "#ffffff";
+    card.style.color = "black";
+  }
+
+  function hide(card) {
+    card.textContent = "?";
+    card.style.background = "#5b3fd1";
+    card.style.color = "white";
+  }
+
+  function endGame(won) {
+    over = true;
+    var msg = document.getElementById("msg");
+    if (won) {
+      msg.textContent = "Hurray " + player + "! You win in " + moves + " moves!";
+      var list = loadScores();
+      list.push({ name: player, moves: moves });
+      saveScores(list);
+      showBoard();
+      beep(1000);
+    } else {
+      msg.textContent = player + ", you lose! 15 moves are over.";
+      beep(200);
+    }
+    document.getElementById("again").style.display = "inline-block";
+  }
+
+  function tap(card) {
+    if (locked || over || card === first || card.dataset.done) return;
+    show(card);
+
+    if (first === null) {
+      first = card;
+      return;
+    }
+
+    moves++;
+    document.getElementById("moves").textContent = moves;
+
+    if (first.dataset.emoji === card.dataset.emoji) {
+      first.dataset.done = "yes";
+      card.dataset.done = "yes";
+      first.style.background = "#c8f2d4";
+      card.style.background = "#c8f2d4";
+      pairs++;
+      document.getElementById("pairs").textContent = pairs;
+      beep(700);
+      first = null;
+      if (pairs === 8) {
+        endGame(true);
+      } else if (moves >= MAX) {
+        endGame(false);
+      }
+    } else {
+      locked = true;
+      var a = first;
+      first = null;
+      setTimeout(function () {
+        hide(a);
+        hide(card);
+        locked = false;
+      }, 800);
+      if (moves >= MAX) {
+        endGame(false);
+      }
+    }
+  }
+
+  function newGame() {
+    var deck = emojis.concat(emojis);
+    for (var i = deck.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var temp = deck[i];
+      deck[i] = deck[j];
+      deck[j] = temp;
+    }
+    first = null;
+    over = false;
+    moves = 0;
+    pairs = 0;
+    document.getElementById("moves").textContent = "0";
+    document.getElementById("pairs").textContent = "0";
+    document.getElementById("again").style.display = "none";
+    grid.innerHTML = "";
+
+    var all = [];
+    for (var k = 0; k < deck.length; k++) {
+      var card = document.createElement("button");
+      card.className = "card";
+      card.dataset.emoji = deck[k];
+      card.onclick = function () { tap(this); };
+      show(card);
+      grid.appendChild(card);
+      all.push(card);
+    }
+
+    locked = true;
+    document.getElementById("msg").textContent = "Memorize the cards...";
+    setTimeout(function () {
+      for (var m = 0; m < all.length; m++) {
+        hide(all[m]);
+      }
+      locked = false;
+      document.getElementById("msg").textContent = "Go!";
+    }, PEEK);
+  }
+
+  document.getElementById("start").onclick = function () {
+    var n = document.getElementById("name").value.trim();
+    if (!n) {
+      alert("Please enter your name");
+      return;
+    }
+    player = n;
+    document.getElementById("who").textContent = player;
+    document.getElementById("login").style.display = "none";
+    document.getElementById("game").style.display = "block";
+    newGame();
+  };
+
+  document.getElementById("again").onclick = newGame;
+
+  document.getElementById("clear").onclick = function () {
+    saveScores([]);
+    showBoard();
+  };
+
+  showBoard();
+</script>

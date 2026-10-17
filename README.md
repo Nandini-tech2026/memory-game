@@ -10,7 +10,7 @@ A memory card game built with HTML, CSS and JavaScript.
 - Leaderboard of best moves (saved with localStorage)
 
 ## Play
-Live link: https://yourusername.github.io/memory-game
+Live link: https://Nandini-tech2026.github.io/memory-game
 
 ## Made by
 N@nadini
